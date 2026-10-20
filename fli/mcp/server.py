@@ -31,6 +31,7 @@ from fli.core import (
     search_airports,
 )
 from fli.core.parsers import ParseError
+from fli.crosscheck import compare_regions
 from fli.models import (
     Airport,
     BagsFilter,
@@ -39,6 +40,7 @@ from fli.models import (
     PassengerInfo,
     TripType,
 )
+from fli.proxy import load_pool
 from fli.search import SearchDates, SearchFlights
 
 
@@ -256,6 +258,45 @@ class DateSearchParams(BaseModel):
         None,
         ge=1,
         description="Maximum layover duration in minutes (multi-stop trips only).",
+    )
+
+
+class RegionCompareParams(BaseModel):
+    """Parameters for comparing one flight's price across several regions."""
+
+    origin: str = Field(description="Departure airport IATA code(s), comma-separated for multiple")
+    destination: str = Field(description="Arrival airport IATA code(s), comma-separated")
+    departure_date: str = Field(description="Outbound travel date in YYYY-MM-DD format")
+    regions: list[str] = Field(
+        ["nl", "eu", "us"],
+        description="Region keys to compare (e.g. ['nl', 'eu', 'us']). Each is routed "
+        "through its own proxy (when configured) and Google locale.",
+    )
+    return_date: str | None = Field(
+        None, description="Return date in YYYY-MM-DD format (omit for one-way)"
+    )
+    currency: str | None = Field(
+        None,
+        description="Common ISO 4217 currency every region is billed in, so prices are "
+        "directly comparable. Defaults to the server's configured currency.",
+    )
+    cabin_class: str = Field(
+        CONFIG.default_cabin_class,
+        description="Cabin class: ECONOMY, PREMIUM_ECONOMY, BUSINESS, or FIRST",
+    )
+    max_stops: str = Field(
+        "ANY", description="Maximum stops: ANY, NON_STOP, ONE_STOP, or TWO_PLUS_STOPS"
+    )
+    airlines: list[str] | None = Field(
+        None, description="Restrict to these airline IATA codes (e.g., ['KL', 'BA'])"
+    )
+    passengers: int = Field(
+        CONFIG.default_passengers, ge=1, description="Number of adult passengers"
+    )
+    include_airline_sites: bool = Field(
+        False,
+        description="Also cross-check each region's cheapest carrier against its official "
+        "website (discovered via DuckDuckGo) for a best-effort price signal.",
     )
 
 
@@ -861,6 +902,47 @@ def _execute_date_search(params: DateSearchParams) -> dict[str, Any]:
         return {"success": False, "error": f"Search failed: {str(e)}", "dates": []}
 
 
+def _execute_region_comparison(params: RegionCompareParams) -> dict[str, Any]:
+    """Compare a flight's price across regions and return formatted results."""
+    try:
+        origins = _resolve_airports(params.origin)
+        destinations = _resolve_airports(params.destination)
+        segments, trip_type = build_flight_segments(
+            origin=origins,
+            destination=destinations,
+            departure_date=params.departure_date,
+            return_date=params.return_date,
+        )
+        filters = FlightSearchFilters(
+            trip_type=trip_type,
+            passenger_info=PassengerInfo(adults=params.passengers),
+            flight_segments=segments,
+            stops=parse_max_stops(params.max_stops),
+            seat_type=parse_cabin_class(params.cabin_class),
+            airlines=parse_airlines(params.airlines),
+        )
+
+        # Bill every region in one currency so the numbers are comparable.
+        currency = parse_currency(params.currency) if params.currency else CONFIG.default_currency
+        comparison = compare_regions(
+            filters,
+            params.regions,
+            currency=currency,
+            proxy_pool=load_pool(),
+            include_airline_sites=params.include_airline_sites,
+            origin=params.origin,
+            destination=params.destination,
+            departure_date=params.departure_date,
+            return_date=params.return_date,
+        )
+        return {"success": True, **comparison.to_dict()}
+
+    except ParseError as e:
+        return {"success": False, "error": str(e), "quotes": []}
+    except Exception as e:
+        return {"success": False, "error": f"Comparison failed: {str(e)}", "quotes": []}
+
+
 # =============================================================================
 # MCP Tools
 # =============================================================================
@@ -1348,6 +1430,73 @@ def find_airports(
     return _find_airports_impl(query, limit=limit)
 
 
+@mcp.tool(
+    annotations={
+        "title": "Compare Regions",
+        "readOnlyHint": True,
+        "idempotentHint": True,
+    },
+)
+def compare_region_prices(
+    origin: Annotated[str, Field(description="Departure airport IATA code(s), comma-separated")],
+    destination: Annotated[str, Field(description="Arrival airport IATA code(s), comma-separated")],
+    departure_date: Annotated[str, Field(description="Travel date in YYYY-MM-DD format")],
+    regions: Annotated[
+        list[str],
+        Field(description="Region keys to compare, e.g. ['nl', 'eu', 'us']"),
+    ] = ["nl", "eu", "us"],  # noqa: B006 — FastMCP needs a concrete default for the schema
+    return_date: Annotated[
+        str | None,
+        Field(description="Return date in YYYY-MM-DD format (omit for one-way)"),
+    ] = None,
+    currency: Annotated[
+        str | None,
+        Field(description="Common ISO 4217 currency every region is billed in (comparable prices)"),
+    ] = None,
+    cabin_class: Annotated[
+        str, Field(description="Cabin class: ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST")
+    ] = CONFIG.default_cabin_class,
+    max_stops: Annotated[
+        str, Field(description="Maximum stops: ANY, NON_STOP, ONE_STOP, TWO_PLUS_STOPS")
+    ] = "ANY",
+    airlines: Annotated[
+        list[str] | None, Field(description="Restrict to these airline IATA codes")
+    ] = None,
+    passengers: Annotated[int | None, Field(description="Number of adult passengers", ge=1)] = None,
+    include_airline_sites: Annotated[
+        bool,
+        Field(description="Also cross-check each region's cheapest carrier's official website"),
+    ] = False,
+) -> dict[str, Any]:
+    """Compare one flight's price across regions to surface regional differences.
+
+    Runs the same search from each region — through that region's proxy
+    (when ``FLI_PROXY`` / ``FLI_PROXY_DIR`` are configured) and Google locale,
+    all billed in one currency — and reports the per-region price and spread.
+    Optionally cross-checks each region's cheapest carrier against its
+    official website for an independent, best-effort price signal.
+    """
+    params = RegionCompareParams(
+        origin=origin,
+        destination=destination,
+        departure_date=departure_date,
+        regions=regions,
+        return_date=return_date,
+        currency=currency,
+        cabin_class=cabin_class,
+        max_stops=max_stops,
+        airlines=airlines,
+        passengers=passengers or CONFIG.default_passengers,
+        include_airline_sites=include_airline_sites,
+    )
+    return _execute_region_comparison(params)
+
+
+def _compare_regions_from_params(params: RegionCompareParams) -> dict[str, Any]:
+    """Entry point for tests that call the comparison tool via a params object."""
+    return _execute_region_comparison(params)
+
+
 # =============================================================================
 # Prompts
 # =============================================================================
@@ -1427,6 +1576,20 @@ def configuration_resource() -> str:
                 "FLI_MCP_DEFAULT_DEPARTURE_WINDOW": "Provide a default departure window (HH-HH).",
                 "FLI_MCP_MAX_RESULTS": "Limit the maximum number of results returned by tools.",
             },
+        },
+        "proxies": {
+            "description": (
+                "Optional proxy configuration for the compare_region_prices tool, so "
+                "searches can originate from a chosen region."
+            ),
+            "FLI_PROXY": (
+                "A single proxy used as the default/fallback region. Accepts "
+                "host:port, host:port:user:pass, user:pass@host:port, or a full URL."
+            ),
+            "FLI_PROXY_DIR": (
+                "Directory of <region>.txt proxy lists (nl.txt, us.txt, eu.txt, ...); "
+                "one proxy per line, the filename is the region key."
+            ),
         },
     }
     return json.dumps(payload, indent=2)

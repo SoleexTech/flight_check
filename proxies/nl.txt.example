@@ -1,0 +1,6 @@
+# Example NL proxy list — copy to "nl.txt" and replace with real proxies.
+# One proxy per line. Region key = filename ("nl"). Blank lines / # comments ignored.
+# Format: host:port  |  host:port:user:pass  |  user:pass@host:port  |  scheme://...
+#
+# 198.51.100.10:8080
+# 198.51.100.11:8080:myuser:mypass

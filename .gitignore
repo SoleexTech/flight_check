@@ -122,6 +122,10 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
+# Proxy pools — region proxy lists (proxies/<region>.txt) hold credentials.
+# Keep them local; only the *.example templates and the README are tracked.
+proxies/*.txt
+
 # Environments
 .env
 .venv

@@ -46,12 +46,15 @@ fli-mcp-http  # serves at http://127.0.0.1:8000/mcp/
 
 ### MCP Tools Available
 
-The MCP server provides two main tools:
+The MCP server provides these tools:
 
-| Tool                 | Description                                                 |
-|----------------------|-------------------------------------------------------------|
-| **`search_flights`** | Search for flights on a specific date with detailed filters |
-| **`search_dates`**   | Find the cheapest travel dates across a flexible date range |
+| Tool                        | Description                                                           |
+|-----------------------------|-----------------------------------------------------------------------|
+| **`search_flights`**        | Search for flights on a specific date with detailed filters           |
+| **`search_dates`**          | Find the cheapest travel dates across a flexible date range           |
+| **`get_booking_options`**   | Bookable fares (airline-direct and OTA) for a single itinerary        |
+| **`find_airports`**         | Resolve city/airport names to IATA codes                              |
+| **`compare_region_prices`** | Compare one flight's price across regions (own proxy + Google locale) |
 
 #### `search_flights` Parameters
 
@@ -101,6 +104,24 @@ The MCP server provides two main tools:
 | `sort_by_price`     | bool   | Sort results by price (lowest first)                        |
 | `passengers`        | int    | Number of adult passengers                                  |
 
+#### `compare_region_prices` Parameters
+
+| Parameter               | Type   | Description                                                      |
+|-------------------------|--------|------------------------------------------------------------------|
+| `origin`                | string | Departure airport IATA code(s) — comma-separated for multi       |
+| `destination`           | string | Arrival airport IATA code(s) — comma-separated for multi         |
+| `departure_date`        | string | Travel date in YYYY-MM-DD format                                 |
+| `regions`               | list   | Region keys to compare (e.g. `['nl', 'eu', 'us']`)               |
+| `return_date`           | string | Return date for round trips (optional)                           |
+| `currency`              | string | Common ISO 4217 currency all regions are billed in (comparable)  |
+| `cabin_class`           | string | ECONOMY, PREMIUM_ECONOMY, BUSINESS, or FIRST                     |
+| `max_stops`             | string | ANY, NON_STOP, ONE_STOP, or TWO_PLUS_STOPS                       |
+| `airlines`              | list   | Restrict to airline IATA codes (e.g. `['KL', 'BA']`)             |
+| `include_airline_sites` | bool   | Also cross-check each region's cheapest carrier's official site  |
+
+Proxies for this tool are configured via the `FLI_PROXY` / `FLI_PROXY_DIR`
+environment variables — see [Cross-Region Price Comparison](#cross-region-price-comparison).
+
 ## Quick Start
 
 ```bash
@@ -139,6 +160,11 @@ fli --help
     * Duration
     * Departure Time
     * Arrival Time
+
+* 🌍 **Cross-Region Comparison**
+    * Compare one flight's price across regions (NL, EU, US, …)
+    * Region-targeted proxies (single proxy or a mixed pool)
+    * Cross-check the cheapest carrier against its official website (via DuckDuckGo)
 
 * 🛡️ **Built-in Protection**
     * Rate limiting
@@ -215,7 +241,68 @@ fli multi \
     --stops 0
 ```
 
+### Cross-Region Price Comparison
+
+Airfare for the *same* flight can differ depending on the region you appear
+to be shopping from. `fli compare` runs one search from several regions at
+once — each routed through that region's proxy and Google locale, all billed
+in one currency so the numbers line up — and reports the price spread.
+
+```bash
+# Compare AMS -> JFK as seen from the Netherlands, the wider EU, and the US
+fli compare AMS JFK 2026-12-15 --regions nl,eu,us
+
+# Bill every region in EUR and also cross-check the cheapest carrier's site
+fli compare AMS JFK 2026-12-15 -R nl,us --currency EUR --airline-sites
+
+# Machine-readable output
+fli compare LHR JFK 2026-12-15 --regions gb,us --format json
+```
+
+Known region keys (`nl`, `eu`, `us`, `gb`, `de`, `fr`, `es`, `it`, `be`,
+`ca`, `au`, `in`, `jp`, `br`) automatically apply the matching Google locale;
+any other 2-letter code is treated as a country.
+
+#### Configuring proxies
+
+The region's *originating IP* is what actually moves Google's prices, so set
+up proxies to make the comparison meaningful. Two styles (see
+[`proxies/README.md`](proxies/README.md) for the full guide):
+
+```bash
+# 1. One proxy for everything (quick start)
+export FLI_PROXY="1.2.3.4:8080:username:password"
+
+# 2. A mixed pool — one <region>.txt file per region
+export FLI_PROXY_DIR="./proxies"   # contains nl.txt, us.txt, eu.txt, ...
+fli compare AMS JFK 2026-12-15 --regions nl,us --proxy-dir ./proxies
+```
+
+Each proxy line accepts `host:port`, `host:port:user:pass` (the format proxy
+vendors export), `user:pass@host:port`, or a full URL. Proxy files hold
+credentials and are git-ignored — never commit them.
+
+With `--airline-sites`, the cheapest carrier per region is looked up on
+DuckDuckGo to find its official regional website (e.g. `klm.nl`), then that
+page is read for a best-effort price signal. This is a *cross-check against a
+valid source*, not a guaranteed live fare — many carrier sites don't expose
+machine-readable prices.
+
 ### CLI Options
+
+#### Compare Command (`fli compare`)
+
+| Option            | Description                                            | Example         |
+|-------------------|--------------------------------------------------------|-----------------|
+| `--regions, -R`   | Comma-separated region keys to compare                 | `nl,eu,us`      |
+| `--return, -r`    | Return date for a round trip                           | `2026-12-22`    |
+| `--currency`      | Common currency every region is billed in              | `EUR`           |
+| `--class, -c`     | Cabin class                                            | `BUSINESS`      |
+| `--stops, -s`     | Maximum stops                                          | `NON_STOP`      |
+| `--airlines, -a`  | Restrict to airline IATA codes                         | `KL,DL`         |
+| `--airline-sites` | Also cross-check each region's cheapest carrier's site | (flag)          |
+| `--proxy-dir`     | Directory of `<region>.txt` proxy lists                | `./proxies`     |
+| `--format`        | Output format: `text` or `json`                        | `json`          |
 
 #### Flights Command (`fli flights`)
 

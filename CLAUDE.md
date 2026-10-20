@@ -11,6 +11,7 @@ Fli is a Python library that provides programmatic access to Google Flights data
 - **Core utilities** (`fli/core/`) - Shared parsing and building utilities
 - **Search engine** (`fli/search/`) - Flight and date search implementations using Google Flights API
 - **Data models** (`fli/models/`) - Pydantic models for airports, airlines, and flight data structures
+- **Cross-region checks** (`fli/crosscheck/`, `fli/proxy.py`) - Region proxy pool (`FLI_PROXY` / `FLI_PROXY_DIR`), DuckDuckGo official-site discovery, best-effort airline-site price extraction, and the `fli compare` / `compare_region_prices` orchestrator
 
 ## Development Commands
 
@@ -73,7 +74,7 @@ uv run mkdocs build         # Build static docs
    - All models use Pydantic for validation
 
 5. **MCP Server** (`fli/mcp/`)
-   - FastMCP-based server with four tools: `search_flights`, `search_dates`, `get_booking_options`, `find_airports`
+   - FastMCP-based server with five tools: `search_flights`, `search_dates`, `get_booking_options`, `find_airports`, `compare_region_prices`
    - Industry-standard parameter naming: `origin`, `destination`, `cabin_class`, `max_stops`
    - Per-flight booking deep-link URLs (`tfs` protobuf) in every search result
    - Prompt templates for guided searches

@@ -7,6 +7,9 @@ This module provides a robust HTTP client that handles:
 - Automatic retries with exponential backoff
 - Thread-safe session management (one ``curl_cffi`` session per worker thread)
 - Error handling
+- Optional per-request proxy routing — ``get``/``post`` forward ``**kwargs``
+  to ``curl_cffi``, so callers may pass ``proxy="http://user:pass@host:port"``
+  (used by :mod:`fli.crosscheck` to originate searches from a chosen region)
 
 Threading model
 ---------------
