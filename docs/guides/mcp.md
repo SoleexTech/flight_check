@@ -305,16 +305,16 @@ The MCP server can be configured via environment variables:
 
 ## Example Conversations
 
-Once configured with Claude Desktop, you can have natural conversations:
+Once configured with an MCP client (e.g. Claude Desktop), you can have natural conversations:
 
 > **User**: "Find me flights from New York to London next month"
 > 
-> **Claude**: *Uses `search_flights` with origin=JFK, destination=LHR*
+> **Assistant**: *Uses `search_flights` with origin=JFK, destination=LHR*
 
 > **User**: "What are the cheapest dates to fly to Tokyo from San Francisco in April?"
 > 
-> **Claude**: *Uses `search_dates` with origin=SFO, destination=NRT, start_date and end_date in April*
+> **Assistant**: *Uses `search_dates` with origin=SFO, destination=NRT, start_date and end_date in April*
 
 > **User**: "Search for business class, non-stop flights from LAX to Paris on March 15th"
 > 
-> **Claude**: *Uses `search_flights` with cabin_class=BUSINESS, max_stops=NON_STOP*
+> **Assistant**: *Uses `search_flights` with cabin_class=BUSINESS, max_stops=NON_STOP*

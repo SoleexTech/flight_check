@@ -1,5 +1,7 @@
 services:
   fli-mcp:
+    # Upstream image. To run this fork's build (pushed by .github/workflows/docker.yml),
+    # use ghcr.io/soleextech/flight_check:latest instead.
     image: ghcr.io/punitarani/fli:latest
     ports:
       - "8000:8000"

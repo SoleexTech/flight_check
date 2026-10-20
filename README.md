@@ -1,6 +1,13 @@
 # 🛫 Fli - Flight Search MCP Server and Library
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/punitarani/fli)
+[![Made by humans & LLM](https://img.shields.io/badge/made%20by-humans%20%26%20LLM-blueviolet)](#about-this-fork)
+
+> [!NOTE]
+> **This is a fork.** `SoleexTech/flight_check` is a fork of
+> [`punitarani/fli`](https://github.com/punitarani/fli) by Punit Arani, distributed under the
+> original MIT License. All credit for the library goes to the upstream project; see
+> [About this fork](#about-this-fork) for what differs here and how it is kept in sync.
 
 A powerful Python library that provides programmatic access to Google Flights data with an elegant CLI interface. Search
 flights, find the best deals, and filter results with ease.
@@ -460,9 +467,9 @@ for the full guide.
 ## Development
 
 ```bash
-# Clone the repository
-git clone https://github.com/punitarani/fli.git
-cd fli
+# Clone the repository (this fork; use punitarani/fli for the upstream project)
+git clone https://github.com/SoleexTech/flight_check.git
+cd flight_check
 
 # Install dependencies with uv
 uv sync --all-extras
@@ -512,10 +519,45 @@ make ci
 make ci-docker
 ```
 
+## About this fork
+
+`SoleexTech/flight_check` tracks [`punitarani/fli`](https://github.com/punitarani/fli). The
+package names, published artifacts, and documentation site are still the upstream ones:
+
+| Artifact          | Name / location                                    | Owner    |
+|-------------------|----------------------------------------------------|----------|
+| PyPI package      | [`flights`](https://pypi.org/project/flights/)     | upstream |
+| npm package       | [`fli-js`](https://www.npmjs.com/package/fli-js)   | upstream |
+| Documentation     | <https://punitarani.github.io/fli>                 | upstream |
+| Docker image      | `ghcr.io/punitarani/fli` (fork CI builds `ghcr.io/soleextech/flight_check`) | both |
+
+The release workflows (`release.yml`, `release-npm.yml`, `publish*.yml`) publish under the
+upstream names, so they will fail in this fork unless PyPI Trusted Publishing and an
+`NPM_TOKEN` are set up for packages this fork owns.
+
+### Syncing with upstream
+
+```bash
+git remote add upstream https://github.com/punitarani/fli.git   # once
+git fetch upstream
+git checkout main
+git merge upstream/main     # merge, don't rebase: keeps the fork's history and signatures intact
+git push origin main
+```
+
+### Authorship mark
+
+Fork changes are written by humans with the help of an LLM and are marked as such: commits
+carry a `Made-by: humans & LLM` trailer and are signed, so the mark can be checked with
+`git log --show-signature`.
+
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Fixes to the library itself are best sent upstream to
+[`punitarani/fli`](https://github.com/punitarani/fli) so everyone benefits; fork-specific
+changes are welcome as Pull Requests on this repository.
 
 ## License
 
-This project is licensed under the MIT License — see the LICENSE file for details.
+This project is licensed under the MIT License — see the LICENSE file for details. The original
+copyright belongs to Punit Arani; fork changes are covered by the same license.

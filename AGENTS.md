@@ -6,6 +6,12 @@
 
 Fli is a Python library providing programmatic access to Google Flights data via reverse-engineered API. It offers a CLI (`fli`), MCP server (`fli-mcp` / `fli-mcp-http`), and Python API. No external services (databases, caches, etc.) are required.
 
+### Fork
+
+This repo is a fork of [`punitarani/fli`](https://github.com/punitarani/fli). PyPI (`flights`),
+npm (`fli-js`) and the docs site are upstream-owned; see "About this fork" in `README.md` for
+syncing and the `Made-by: humans & LLM` commit mark.
+
 ### Development commands
 
 All standard commands are in the `Makefile` and `CLAUDE.md`. Key ones:
