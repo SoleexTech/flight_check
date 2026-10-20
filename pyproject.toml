@@ -60,9 +60,12 @@ fli = "fli.cli:cli"
 fli-mcp = "fli.mcp._entry:run"
 fli-mcp-http = "fli.mcp._entry:run_http"
 
+# This repository is a fork of punitarani/fli; the package name and docs remain upstream's.
 [project.urls]
-Homepage = "https://github.com/punitarani/fli"
-Repository = "https://github.com/punitarani/fli"
+Homepage = "https://github.com/SoleexTech/flight_check"
+Repository = "https://github.com/SoleexTech/flight_check"
+Issues = "https://github.com/SoleexTech/flight_check/issues"
+Upstream = "https://github.com/punitarani/fli"
 Documentation = "https://punitarani.github.io/fli"
 
 [build-system]

@@ -1,9 +1,10 @@
 site_name: Fli Documentation
 site_url: https://punitarani.github.io/fli
 site_description: Documentation for the Fli library - A Python library for direct Google Flights API access
-repo_url: https://github.com/punitarani/fli
+# Fork of punitarani/fli: repo links point here, the hosted docs site is still upstream's.
+repo_url: https://github.com/SoleexTech/flight_check
 site_author: Punit Arani
-copyright: Copyright &copy; 2024-2026 Punit Arani
+copyright: Copyright &copy; 2024-2026 Punit Arani &middot; fork maintained by SoleexTech
 
 theme:
   name: material
@@ -84,7 +85,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/punitarani/fli
+      link: https://github.com/SoleexTech/flight_check
   analytics:
     provider: google
     property: !ENV GOOGLE_ANALYTICS_KEY

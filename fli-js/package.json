@@ -62,12 +62,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/punitarani/fli.git",
+    "url": "git+https://github.com/SoleexTech/flight_check.git",
     "directory": "fli-js"
   },
-  "homepage": "https://github.com/punitarani/fli/tree/main/fli-js#readme",
+  "homepage": "https://github.com/SoleexTech/flight_check/tree/main/fli-js#readme",
   "bugs": {
-    "url": "https://github.com/punitarani/fli/issues"
+    "url": "https://github.com/SoleexTech/flight_check/issues"
   },
   "publishConfig": {
     "access": "public",

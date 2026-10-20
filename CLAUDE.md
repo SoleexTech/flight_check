@@ -4,6 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
+> **Fork:** this repository (`SoleexTech/flight_check`) is a fork of
+> [`punitarani/fli`](https://github.com/punitarani/fli). Keep library fixes upstream-friendly,
+> sync with `git merge upstream/main` (never rebase `main`), and mark fork commits with a
+> `Made-by: humans & LLM` trailer on signed commits. See "About this fork" in `README.md`.
+
 Fli is a Python library that provides programmatic access to Google Flights data through direct API interaction (reverse engineering). The project consists of:
 
 - **CLI interface** (`fli/cli/`) - Typer-based command line tool with `flights` and `dates` commands
