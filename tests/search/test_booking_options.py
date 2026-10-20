@@ -2,7 +2,7 @@
 
 import json
 import urllib.parse
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 
 import pytest
 
@@ -19,6 +19,11 @@ from fli.models import (
 )
 from fli.search.flights import SearchFlights, _try_parse_booking_row
 
+# Travel dates relative to today: FlightSegment rejects past dates, so
+# hard-coded calendar dates silently expire and break these tests.
+OUT_DATE = date.today() + timedelta(days=60)
+IN_DATE = OUT_DATE + timedelta(days=4)
+
 
 def _round_trip_filters():
     """Build a round-trip filter with selected_flight set on both segments."""
@@ -27,8 +32,8 @@ def _round_trip_filters():
         flight_number="171",
         departure_airport=Airport.JFK,
         arrival_airport=Airport.LAX,
-        departure_datetime=datetime(2026, 7, 15, 6, 0),
-        arrival_datetime=datetime(2026, 7, 15, 9, 1),
+        departure_datetime=datetime.combine(OUT_DATE, time(6, 0)),
+        arrival_datetime=datetime.combine(OUT_DATE, time(9, 1)),
         duration=361,
     )
     leg_in = FlightLeg(
@@ -36,8 +41,8 @@ def _round_trip_filters():
         flight_number="28",
         departure_airport=Airport.LAX,
         arrival_airport=Airport.JFK,
-        departure_datetime=datetime(2026, 7, 19, 15, 15),
-        arrival_datetime=datetime(2026, 7, 19, 23, 54),
+        departure_datetime=datetime.combine(IN_DATE, time(15, 15)),
+        arrival_datetime=datetime.combine(IN_DATE, time(23, 54)),
         duration=339,
     )
     sel_out = FlightResult(
@@ -57,13 +62,13 @@ def _round_trip_filters():
     seg_out = FlightSegment(
         departure_airport=[[Airport.JFK, 0]],
         arrival_airport=[[Airport.LAX, 0]],
-        travel_date="2026-07-15",
+        travel_date=OUT_DATE.isoformat(),
         selected_flight=sel_out,
     )
     seg_in = FlightSegment(
         departure_airport=[[Airport.LAX, 0]],
         arrival_airport=[[Airport.JFK, 0]],
-        travel_date="2026-07-19",
+        travel_date=IN_DATE.isoformat(),
         selected_flight=sel_in,
     )
     return FlightSearchFilters(
@@ -102,9 +107,9 @@ class TestEncodeBookingPayload:
         assert len(segments) == 2
         # selected_flight legs sit at segment[8]; verify each leg's basic fields.
         out_sel = segments[0][8]
-        assert out_sel == [["JFK", "2026-07-15", "LAX", None, "AA", "171"]]
+        assert out_sel == [["JFK", OUT_DATE.isoformat(), "LAX", None, "AA", "171"]]
         in_sel = segments[1][8]
-        assert in_sel == [["LAX", "2026-07-19", "JFK", None, "AA", "28"]]
+        assert in_sel == [["LAX", IN_DATE.isoformat(), "JFK", None, "AA", "28"]]
 
 
 class TestGetBookingOptionsTokenGuard:

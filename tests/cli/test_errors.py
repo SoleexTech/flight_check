@@ -195,6 +195,7 @@ class TestReportCliErrorOptions:
 def test_flights_command_json_error_includes_log_path(runner, monkeypatch, tmp_path):
     """JSON-mode errors should include the log path and a typed error_type."""
     import json
+    from datetime import date, timedelta
 
     from curl_cffi.requests import exceptions as curl_exc
 
@@ -205,7 +206,14 @@ def test_flights_command_json_error_includes_log_path(runner, monkeypatch, tmp_p
 
     result = runner.invoke(
         app,
-        ["flights", "JFK", "LHR", "2026-10-25", "--format", "json"],
+        [
+            "flights",
+            "JFK",
+            "LHR",
+            (date.today() + timedelta(days=60)).isoformat(),
+            "--format",
+            "json",
+        ],
     )
 
     assert result.exit_code == 1

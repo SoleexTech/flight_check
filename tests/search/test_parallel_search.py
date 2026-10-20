@@ -13,7 +13,7 @@ import json
 import threading
 import time
 from copy import deepcopy
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -99,6 +99,11 @@ def _date_fixture(days: int = 61) -> str:
     return ")]}'\n" + json.dumps([["wrb.fr", None, inner]])
 
 
+# Travel dates relative to today: FlightSegment rejects past dates, so
+# hard-coded calendar dates silently expire and break these tests.
+START_DATE = date.today() + timedelta(days=30)
+
+
 # ---------------------------------------------------------------------------
 # Filter builders
 # ---------------------------------------------------------------------------
@@ -112,12 +117,12 @@ def _round_trip_filters() -> FlightSearchFilters:
             FlightSegment(
                 departure_airport=[[Airport.JFK, 0]],
                 arrival_airport=[[Airport.LAX, 0]],
-                travel_date="2026-08-01",
+                travel_date=START_DATE.isoformat(),
             ),
             FlightSegment(
                 departure_airport=[[Airport.LAX, 0]],
                 arrival_airport=[[Airport.JFK, 0]],
-                travel_date="2026-08-08",
+                travel_date=(START_DATE + timedelta(days=7)).isoformat(),
             ),
         ],
     )
@@ -131,11 +136,11 @@ def _date_filters(days: int) -> DateSearchFilters:
             FlightSegment(
                 departure_airport=[[Airport.JFK, 0]],
                 arrival_airport=[[Airport.LAX, 0]],
-                travel_date="2026-08-01",
+                travel_date=START_DATE.isoformat(),
             )
         ],
-        from_date="2026-08-01",
-        to_date=(datetime(2026, 8, 1) + timedelta(days=days - 1)).strftime("%Y-%m-%d"),
+        from_date=START_DATE.isoformat(),
+        to_date=(START_DATE + timedelta(days=days - 1)).strftime("%Y-%m-%d"),
     )
 
 
@@ -295,7 +300,7 @@ class TestDateChunkParallel:
         first = chunks[0].flight_segments[0].travel_date
         second = chunks[1].flight_segments[0].travel_date
         third = chunks[2].flight_segments[0].travel_date
-        assert first == "2026-08-01"
+        assert first == START_DATE.isoformat()
         # Shifted by exactly 61 and 122 days.
         assert datetime.strptime(second, "%Y-%m-%d") - datetime.strptime(
             first, "%Y-%m-%d"
