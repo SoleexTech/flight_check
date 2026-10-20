@@ -7,6 +7,7 @@ _flight_extras, and the bare-except error path in _execute_flight_search.
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from unittest.mock import MagicMock
 
 import pytest
@@ -217,7 +218,7 @@ class TestExecuteFlightSearchNetworkError:
         return FlightSearchParams(
             origin="JFK",
             destination="LHR",
-            departure_date="2026-12-01",
+            departure_date=(date.today() + timedelta(days=60)).isoformat(),
         )
 
     def test_search_client_error_returns_success_false(self, monkeypatch, valid_params):

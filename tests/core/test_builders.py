@@ -1,7 +1,14 @@
+from datetime import date
+
 import pytest
 
 from fli.core.builders import build_date_search_segments, build_flight_segments, normalize_date
 from fli.models import Airport, TripType
+
+# Segment builders reject past travel dates, so pin the validated cases to
+# next year (Jan/Mar dates there are always in the future) instead of a
+# fixed calendar year that silently expires.
+NEXT_YEAR = date.today().year + 1
 
 
 class TestNormalizeDate:
@@ -35,20 +42,20 @@ class TestBuildFlightSegments:
         segments, _ = build_flight_segments(
             origin=Airport.JFK,
             destination=Airport.LAX,
-            departure_date="2027-1-15",
+            departure_date=f"{NEXT_YEAR}-1-15",
         )
-        assert segments[0].travel_date == "2027-01-15"
+        assert segments[0].travel_date == f"{NEXT_YEAR}-01-15"
 
     def test_normalizes_return_date(self):
         segments, trip_type = build_flight_segments(
             origin=Airport.JFK,
             destination=Airport.LAX,
-            departure_date="2027-1-15",
-            return_date="2027-1-22",
+            departure_date=f"{NEXT_YEAR}-1-15",
+            return_date=f"{NEXT_YEAR}-1-22",
         )
         assert trip_type == TripType.ROUND_TRIP
-        assert segments[0].travel_date == "2027-01-15"
-        assert segments[1].travel_date == "2027-01-22"
+        assert segments[0].travel_date == f"{NEXT_YEAR}-01-15"
+        assert segments[1].travel_date == f"{NEXT_YEAR}-01-22"
 
 
 class TestBuildDateSearchSegments:
@@ -58,21 +65,21 @@ class TestBuildDateSearchSegments:
         segments, _ = build_date_search_segments(
             origin=Airport.JFK,
             destination=Airport.LAX,
-            start_date="2027-1-15",
+            start_date=f"{NEXT_YEAR}-1-15",
         )
-        assert segments[0].travel_date == "2027-01-15"
+        assert segments[0].travel_date == f"{NEXT_YEAR}-01-15"
 
     def test_normalizes_start_date_round_trip(self):
         segments, trip_type = build_date_search_segments(
             origin=Airport.JFK,
             destination=Airport.LAX,
-            start_date="2027-1-15",
+            start_date=f"{NEXT_YEAR}-1-15",
             is_round_trip=True,
             trip_duration=7,
         )
         assert trip_type == TripType.ROUND_TRIP
-        assert segments[0].travel_date == "2027-01-15"
-        assert segments[1].travel_date == "2027-01-22"
+        assert segments[0].travel_date == f"{NEXT_YEAR}-01-15"
+        assert segments[1].travel_date == f"{NEXT_YEAR}-01-22"
 
 
 class TestBuildFlightSegmentsMultiAirport:
@@ -82,7 +89,7 @@ class TestBuildFlightSegmentsMultiAirport:
         segments, _ = build_flight_segments(
             origin=Airport.JFK,
             destination=Airport.LAX,
-            departure_date="2027-03-15",
+            departure_date=f"{NEXT_YEAR}-03-15",
         )
         assert segments[0].departure_airport == [[Airport.JFK, 0]]
         assert segments[0].arrival_airport == [[Airport.LAX, 0]]
@@ -91,7 +98,7 @@ class TestBuildFlightSegmentsMultiAirport:
         segments, _ = build_flight_segments(
             origin=[Airport.JFK, Airport.LGA],
             destination=Airport.LHR,
-            departure_date="2027-03-15",
+            departure_date=f"{NEXT_YEAR}-03-15",
         )
         assert segments[0].departure_airport == [[Airport.JFK, 0], [Airport.LGA, 0]]
         assert segments[0].arrival_airport == [[Airport.LHR, 0]]
@@ -100,7 +107,7 @@ class TestBuildFlightSegmentsMultiAirport:
         segments, _ = build_flight_segments(
             origin=Airport.JFK,
             destination=[Airport.LHR, Airport.CDG],
-            departure_date="2027-03-15",
+            departure_date=f"{NEXT_YEAR}-03-15",
         )
         assert segments[0].departure_airport == [[Airport.JFK, 0]]
         assert segments[0].arrival_airport == [[Airport.LHR, 0], [Airport.CDG, 0]]
@@ -109,7 +116,7 @@ class TestBuildFlightSegmentsMultiAirport:
         segments, _ = build_flight_segments(
             origin=[Airport.JFK, Airport.LGA, Airport.EWR],
             destination=[Airport.LHR, Airport.CDG],
-            departure_date="2027-03-15",
+            departure_date=f"{NEXT_YEAR}-03-15",
         )
         assert segments[0].departure_airport == [
             [Airport.JFK, 0],
@@ -122,8 +129,8 @@ class TestBuildFlightSegmentsMultiAirport:
         segments, trip_type = build_flight_segments(
             origin=[Airport.JFK, Airport.LGA],
             destination=[Airport.LHR, Airport.CDG],
-            departure_date="2027-03-15",
-            return_date="2027-03-22",
+            departure_date=f"{NEXT_YEAR}-03-15",
+            return_date=f"{NEXT_YEAR}-03-22",
         )
         assert trip_type == TripType.ROUND_TRIP
         assert segments[0].departure_airport == [[Airport.JFK, 0], [Airport.LGA, 0]]
@@ -139,7 +146,7 @@ class TestBuildDateSearchSegmentsMultiAirport:
         segments, _ = build_date_search_segments(
             origin=Airport.JFK,
             destination=Airport.LAX,
-            start_date="2027-03-15",
+            start_date=f"{NEXT_YEAR}-03-15",
         )
         assert segments[0].departure_airport == [[Airport.JFK, 0]]
         assert segments[0].arrival_airport == [[Airport.LAX, 0]]
@@ -148,7 +155,7 @@ class TestBuildDateSearchSegmentsMultiAirport:
         segments, _ = build_date_search_segments(
             origin=[Airport.JFK, Airport.LGA],
             destination=[Airport.LHR, Airport.CDG],
-            start_date="2027-03-15",
+            start_date=f"{NEXT_YEAR}-03-15",
         )
         assert segments[0].departure_airport == [[Airport.JFK, 0], [Airport.LGA, 0]]
         assert segments[0].arrival_airport == [[Airport.LHR, 0], [Airport.CDG, 0]]
@@ -157,7 +164,7 @@ class TestBuildDateSearchSegmentsMultiAirport:
         segments, trip_type = build_date_search_segments(
             origin=[Airport.JFK, Airport.LGA],
             destination=[Airport.LHR, Airport.CDG],
-            start_date="2027-03-15",
+            start_date=f"{NEXT_YEAR}-03-15",
             is_round_trip=True,
             trip_duration=7,
         )

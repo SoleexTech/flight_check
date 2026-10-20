@@ -53,6 +53,7 @@ class SearchDates:
         currency: str | None = None,
         language: str | None = None,
         country: str | None = None,
+        proxy: str | None = None,
     ) -> list[DatePrice] | None:
         """Search for flight prices across a date range and search parameters.
 
@@ -61,6 +62,8 @@ class SearchDates:
             currency: Optional ISO 4217 currency code (e.g. ``"EUR"``) to bill prices in.
             language: Optional BCP-47 language code passed via the ``hl`` URL param.
             country: Optional ISO 3166-1 alpha-2 country code passed via the ``gl`` URL param.
+            proxy: Optional proxy URL to route requests through, so the search
+                can originate from a chosen region. ``None`` sends directly.
 
         Returns:
             List of DatePrice objects containing date and price pairs, or None if no results
@@ -79,7 +82,7 @@ class SearchDates:
 
         if date_range <= self.MAX_DAYS_PER_SEARCH:
             return self._search_chunk(
-                filters, currency=currency, language=language, country=country
+                filters, currency=currency, language=language, country=country, proxy=proxy
             )
 
         # Build every chunk descriptor up front so the per-chunk requests
@@ -92,7 +95,7 @@ class SearchDates:
 
         chunk_results = parallel_map(
             lambda cf: self._search_chunk(
-                cf, currency=currency, language=language, country=country
+                cf, currency=currency, language=language, country=country, proxy=proxy
             ),
             chunk_filters,
         )
@@ -155,6 +158,7 @@ class SearchDates:
         currency: str | None = None,
         language: str | None = None,
         country: str | None = None,
+        proxy: str | None = None,
     ) -> list[DatePrice] | None:
         """Search for flight prices for a single date range chunk.
 
@@ -163,6 +167,7 @@ class SearchDates:
             currency: Optional ISO 4217 currency code passed via the ``curr`` URL param.
             language: Optional BCP-47 language code passed via the ``hl`` URL param.
             country: Optional ISO 3166-1 alpha-2 country code passed via the ``gl`` URL param.
+            proxy: Optional proxy URL forwarded to the HTTP client.
 
         Returns:
             List of DatePrice objects containing date and price pairs, or None if no results
@@ -179,6 +184,7 @@ class SearchDates:
             data=f"f.req={encoded_filters}",
             impersonate="chrome",
             allow_redirects=True,
+            proxy=proxy,
         )
         response.raise_for_status()
 

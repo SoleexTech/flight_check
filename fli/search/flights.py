@@ -100,6 +100,7 @@ class SearchFlights:
         currency: str | None = None,
         language: str | None = None,
         country: str | None = None,
+        proxy: str | None = None,
     ) -> list[FlightResult | tuple[FlightResult, ...]] | None:
         """Search for flights using the given :class:`FlightSearchFilters`.
 
@@ -110,6 +111,9 @@ class SearchFlights:
             currency: Optional ISO 4217 currency code (``curr`` URL param).
             language: Optional BCP-47 language code (``hl`` URL param).
             country: Optional ISO 3166-1 alpha-2 country code (``gl`` URL param).
+            proxy: Optional proxy URL to route the request through. Lets the
+                same query run "from" a different region (see
+                :mod:`fli.crosscheck.compare`); ``None`` sends it directly.
 
         Returns:
             For one-way trips, a list of :class:`FlightResult`. For
@@ -126,6 +130,7 @@ class SearchFlights:
             currency=currency,
             language=language,
             country=country,
+            proxy=proxy,
             capture_session=True,
         )
         if flights is None:
@@ -139,6 +144,7 @@ class SearchFlights:
             currency=currency,
             language=language,
             country=country,
+            proxy=proxy,
         )
 
     def _fetch_flights(
@@ -149,6 +155,7 @@ class SearchFlights:
         language: str | None,
         country: str | None,
         capture_session: bool,
+        proxy: str | None = None,
     ) -> list[FlightResult] | None:
         """Issue one ``GetShoppingResults`` call and decode the flight rows.
 
@@ -159,6 +166,9 @@ class SearchFlights:
         not write to that field — both because the writes would race and
         because the user-visible session id should describe the original
         shopping query, not whichever expansion completed last.
+
+        ``proxy`` is forwarded to the HTTP client so the call can originate
+        from a chosen region.
         """
         encoded = filters.encode()
         url = with_locale_params(self.BASE_URL, currency, language, country)
@@ -168,6 +178,7 @@ class SearchFlights:
             data=f"f.req={encoded}",
             impersonate="chrome",
             allow_redirects=True,
+            proxy=proxy,
         )
         response.raise_for_status()
 
@@ -197,7 +208,10 @@ class SearchFlights:
         for row in flights_raw:
             try:
                 flights.append(parse_flight_row(row))
-            except (AttributeError, KeyError, ValueError, TypeError) as e:
+            except (AttributeError, IndexError, KeyError, ValueError, TypeError) as e:
+                # parse_flight_row indexes raw positions (row[0], detail[9],
+                # fl[20], ...), so a short/half-populated sponsor row can raise
+                # IndexError too — treat it as "skip this row" like the rest.
                 reason = f"{type(e).__name__}: {e}"
                 any_failure = True
                 if reason not in failure_samples and len(failure_samples) < 3:
@@ -453,6 +467,7 @@ class SearchFlights:
         currency: str | None,
         language: str | None,
         country: str | None,
+        proxy: str | None = None,
     ) -> list[tuple[FlightResult, ...]] | list[FlightResult]:
         """Fetch next-leg options for round-trip / multi-city in parallel.
 
@@ -491,6 +506,7 @@ class SearchFlights:
                 currency=currency,
                 language=language,
                 country=country,
+                proxy=proxy,
                 capture_session=False,
             )
             if sub_flights is None:
@@ -506,6 +522,7 @@ class SearchFlights:
                     currency=currency,
                     language=language,
                     country=country,
+                    proxy=proxy,
                 )
             return outbound, sub_flights
 

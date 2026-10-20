@@ -393,3 +393,53 @@ class TestParseFlightsDataEmptyPriceHead:
         row = _row(legs=[_leg(dep_iata="JFK", arr_iata="LAX")])
         flight = SearchFlights._parse_flights_data(row)
         assert flight.price_unknown is False
+
+
+class TestFetchFlightsRowSkipping:
+    """A malformed row must be skipped, not crash the whole _fetch_flights call."""
+
+    def _filters(self):
+        from datetime import date, timedelta
+
+        from fli.core import build_flight_segments, resolve_airport
+        from fli.models import FlightSearchFilters, PassengerInfo
+
+        segments, trip_type = build_flight_segments(
+            origin=resolve_airport("JFK"),
+            destination=resolve_airport("LAX"),
+            departure_date=(date.today() + timedelta(days=60)).isoformat(),
+        )
+        return FlightSearchFilters(
+            trip_type=trip_type,
+            passenger_info=PassengerInfo(adults=1),
+            flight_segments=segments,
+        )
+
+    def test_indexerror_row_is_skipped_not_fatal(self, monkeypatch):
+        # An empty row makes parse_flight_row do row[0] -> IndexError. Before the
+        # fix the loop only caught (AttributeError, KeyError, ValueError, TypeError),
+        # so this aborted the entire search; now it's skipped like any bad row.
+        search = SearchFlights()
+        good_row = _row(legs=[_leg(dep_iata="JFK", arr_iata="LAX")])
+        bad_row: list = []  # row[0] raises IndexError
+
+        inner = [[None, None, None, None, "sess"], None, [[good_row, bad_row]], None]
+        monkeypatch.setattr("fli.search.flights.parse_first_wrb_payload", lambda text: inner)
+
+        class _Resp:
+            text = ""
+
+            def raise_for_status(self):
+                return None
+
+        class _Client:
+            def post(self, **kwargs):
+                return _Resp()
+
+        search.client = _Client()
+        flights = search._fetch_flights(
+            self._filters(), currency=None, language=None, country=None, capture_session=True
+        )
+        assert flights is not None
+        assert len(flights) == 1  # the good row survived; the bad one was skipped
+        assert flights[0].legs[0].departure_airport == Airport.JFK
