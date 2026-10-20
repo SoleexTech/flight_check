@@ -1,3 +1,4 @@
+# Fork of punitarani/fli: dependency PRs are reviewed by the fork maintainer.
 version: 2
 updates:
   # Enable version updates for Python dependencies
@@ -8,7 +9,7 @@ updates:
       day: "monday"
     open-pull-requests-limit: 10
     reviewers:
-      - "punitarani"
+      - "SoleexTech"
     commit-message:
       prefix: "deps"
       include: "scope"
@@ -36,7 +37,7 @@ updates:
       day: "monday"
     open-pull-requests-limit: 5
     reviewers:
-      - "punitarani"
+      - "SoleexTech"
     commit-message:
       prefix: "ci"
       include: "scope"
@@ -49,7 +50,7 @@ updates:
       day: "monday"
     open-pull-requests-limit: 5
     reviewers:
-      - "punitarani"
+      - "SoleexTech"
     commit-message:
       prefix: "deps"
       include: "scope"
