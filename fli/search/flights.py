@@ -208,7 +208,10 @@ class SearchFlights:
         for row in flights_raw:
             try:
                 flights.append(parse_flight_row(row))
-            except (AttributeError, KeyError, ValueError, TypeError) as e:
+            except (AttributeError, IndexError, KeyError, ValueError, TypeError) as e:
+                # parse_flight_row indexes raw positions (row[0], detail[9],
+                # fl[20], ...), so a short/half-populated sponsor row can raise
+                # IndexError too — treat it as "skip this row" like the rest.
                 reason = f"{type(e).__name__}: {e}"
                 any_failure = True
                 if reason not in failure_samples and len(failure_samples) < 3:
